@@ -107,6 +107,27 @@ exit 0
         mp.chmod(0o755)
         return tools
 
+    def test_extra_runtime_dependencies(self):
+        for dependencies in ("webkit2gtk-4.1 gtk3 openssl", "webkit;touch-injected"):
+            with self.subTest(dependencies=dependencies), tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                tarball = self._create_fixture_tarball(root)
+                tools = self._setup_mock_tools(root)
+                capture = root / "capture"
+                capture.mkdir()
+                result = subprocess.run(
+                    [str(ARCH_SCRIPT), str(tarball), "x86_64", str(root / "out")],
+                    capture_output=True, text=True,
+                    env={**os.environ, "PATH": f"{tools}:{os.environ['PATH']}",
+                         "MOCK_CAPTURE": str(capture), "ARCH_EXTRA_DEPENDS": dependencies},
+                )
+                if ";" in dependencies:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("invalid extra dependency", result.stderr)
+                else:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn("webkit2gtk-4.1 gtk3 openssl", (capture / "PKGBUILD").read_text())
+
     def test_unsupported_architecture_rejected(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)

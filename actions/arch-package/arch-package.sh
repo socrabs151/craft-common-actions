@@ -196,6 +196,14 @@ EOF
 # libxkbcommon-x11 is a hard dependency next to libxkbcommon: the apps build winit's X11 backend,
 # which loads it at startup on X11 and XWayland, and panics without it ("Library
 # libxkbcommon-x11.so could not be loaded"; photocraft#201). Arch packages it separately.
+extra_dependencies=()
+read -r -a extra_dependencies <<< "${ARCH_EXTRA_DEPENDS:-}"
+extra_dependencies_shell=""
+for dependency in "${extra_dependencies[@]}"; do
+  [[ "$dependency" =~ ^[a-zA-Z0-9@_+][a-zA-Z0-9@._+:-]*$ ]] || die "invalid extra dependency: $dependency"
+  extra_dependencies_shell+=" $(printf '%q' "$dependency")"
+done
+
 cat > "$work/PKGBUILD" <<EOF
 # Maintainer: Storyteller Authors
 pkgname=$(printf '%q' "$pkgname")
@@ -205,7 +213,7 @@ pkgdesc=$(printf '%q' "$pkgdesc")
 arch=($(printf '%q' "$arch"))
 url=$(printf '%q' "$url")
 license=($license_str)
-depends=('glibc' 'gcc-libs' 'hicolor-icon-theme' 'libxkbcommon' 'libxkbcommon-x11' 'vulkan-icd-loader')
+depends=('glibc' 'gcc-libs' 'hicolor-icon-theme' 'libxkbcommon' 'libxkbcommon-x11' 'vulkan-icd-loader'$extra_dependencies_shell)
 optdepends=(
   'alsa-lib: sound support'
   'pipewire-alsa: audio playback and recording via PipeWire'
